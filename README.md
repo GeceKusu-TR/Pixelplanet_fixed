@@ -1,90 +1,85 @@
-# Pixarea 🎨
+# PixelPlanet.fun — Fixed Edition
 
-Pixarea is a community pixel-canvas web application derived from **PixelPlanet.fun**. This repository contains the Pixarea source snapshot and its project-specific security changes.
+A community-maintained, modified version of **PixelPlanet.fun**, focused on fixing deployment and security problems in the original source code. This repository is **not the official PixelPlanet.fun repository**.
 
-> **Upstream and attribution:** [TheRdMelon/pixelplanet](https://github.com/TheRdMelon/pixelplanet) — original PixelPlanet.fun project. Pixarea is a modified derivative, **not** the official PixelPlanet.fun repository. Original copyright notices and the **GPL-3.0** license are retained.
+**Original source:** [TheRdMelon/pixelplanet](https://github.com/TheRdMelon/pixelplanet)  
+**This edition:** [GeceKusu-TR/Pixelplanet_fixed](https://github.com/GeceKusu-TR/Pixelplanet_fixed)
 
-## What is different?
+## What changed?
 
-Compared with the upstream project's published README, this Pixarea snapshot contains several security-focused changes:
+Compared with the upstream version, this source snapshot includes security and deployment improvements, including:
 
-- Database credentials, session secrets and privileged WebSocket API keys are read from environment variables rather than bundled production secrets.
-- The privileged `/mcws` interface requires a configured API key; the old reusable fallback key is removed.
-- Session cookie options include `Secure`, `HttpOnly` and `SameSite=Lax`.
-- CSRF/origin checks, OAuth state validation and restrictions on state-changing GET routes were added in the modified application.
-- The default bind address is `127.0.0.1`, intended for deployment behind a trusted HTTPS reverse proxy.
-- Some administrator and account-recovery paths have improved request-origin/IP handling.
+- Application database credentials, session secret, and privileged WebSocket key are configured through environment variables.
+- Privileged `/mcws` WebSocket connections require an API key.
+- Session cookies use `Secure`, `HttpOnly`, and `SameSite=Lax` settings.
+- OAuth state validation, CSRF/origin protections, and restrictions on state-changing GET requests.
+- Application defaults to listening on localhost, intended for use behind an HTTPS reverse proxy.
+- Safer IP handling for selected administrator and password-reset rate limits.
 
-These are **source-level features**, not a claim of a complete penetration test. The repository still contains older dependencies and some OAuth providers use placeholder `dummy` values if unconfigured; configure providers deliberately.
+These are documented changes, **not a guarantee that the application has no vulnerabilities**.
 
-## Installation and deployment
+## Installation
 
-**Pixarea is intended to be simpler to deploy than the upstream manual setup.** On the operator's existing server, a prepared deployment was brought online, but **this public ZIP does not contain a verified one-command installer**. Do not assume a single command provisions MySQL, Redis, TLS and PM2 automatically. The steps below are the documented manual fallback.
+This edition aims to simplify deployment compared with the upstream project. **A fully automated one-command installation from a fresh server has not been verified for this archive.** The following steps are a manual fallback.
 
 ### Requirements
 
-- Linux server (Ubuntu recommended)
-- Node.js and npm compatible with this legacy dependency tree (test in a staging environment; Node.js 12 is end-of-life)
-- MySQL or MariaDB, Redis, and PM2
-- An HTTPS reverse proxy (e.g., Nginx) for public access
+- Linux (Ubuntu recommended)
+- Node.js and npm compatible with the legacy dependencies (Node.js 12 is end-of-life; test upgrades before deploying)
+- MySQL/MariaDB, Redis, and PM2
+- HTTPS reverse proxy such as Nginx
 
-### 1. Download and build
+### Download and build
 
 ```bash
-git clone <YOUR-PIXAREA-REPOSITORY-URL>
-cd <YOUR-PIXAREA-REPOSITORY-FOLDER>
+git clone https://github.com/GeceKusu-TR/Pixelplanet_fixed.git
+cd Pixelplanet_fixed
 npm install
 npm run build
 ```
 
-Replace the placeholders with the URL and directory of your published repository. Legacy native dependencies may need additional build packages; installation has **not** been validated from scratch against a fresh server.
+### Configuration
 
-### 2. Prepare services and secrets
-
-Create a **dedicated, least-privileged** MySQL database and user. Start Redis. Supply configuration as environment variables (do **not** commit real credentials):
+Set the required environment variables **outside the public repository**:
 
 | Variable | Purpose |
 | --- | --- |
-| `HOST` | Bind host, normally `127.0.0.1` |
-| `PORT` | Internal application port, e.g. `3000` |
-| `REDIS_URL` | Redis connection URL (match your server's actual Redis port) |
-| `MYSQL_HOST` | Database host |
+| `HOST` | Bind address, normally `127.0.0.1` |
+| `PORT` | Internal HTTP port, e.g. `3000` |
+| `REDIS_URL` | Redis URL |
+| `MYSQL_HOST` | Database hostname |
 | `MYSQL_DATABASE` | Database name |
-| `MYSQL_USER` | Dedicated application database user |
+| `MYSQL_USER` | Dedicated database username (do not use MySQL root) |
 | `MYSQL_PW` | Database password |
-| `SESSION_SECRET` | Strong, randomly generated session secret |
-| `APISOCKET_KEY` | Strong, randomly generated key for privileged WebSocket operations |
-| `ADMIN_IDS` | Comma-separated administrator account IDs (optional) |
+| `SESSION_SECRET` | Random session secret |
+| `APISOCKET_KEY` | Random privileged WebSocket API key |
 
-OAuth integrations require provider-specific client IDs and secrets. Set only the integrations you intend to enable. See `src/core/config.js` for further configuration options.
+Configure OAuth client IDs and secrets only for the providers you use. See `src/core/config.js` and `ecosystem.example.yml` for examples. **Do not commit actual secrets, backups, or user data.**
 
-### 3. Run behind HTTPS
+### Run
 
-The source includes `tools/example-ecosystem.yml` as a **reference**, not a ready-to-run production configuration. Build the application, supply environment variables through a private PM2 configuration or service environment, and use the appropriate generated entry point in `build/`.
+After preparing MySQL, Redis, and the required environment variables, build the application and adapt the supplied example PM2 configuration to your server. Run it behind an HTTPS reverse proxy; keep the Node.js service bound to localhost. The example configuration is **not** a production-ready installer.
 
-Keep the Node service on localhost; configure your reverse proxy for HTTPS and trusted forwarded headers. **Never expose MySQL or Redis publicly.** Run the application under a dedicated non-root OS account where practical.
+### Basic verification
 
-### 4. Verify
-
-- Build succeeds (`npm run build`).
-- The home page responds over HTTPS.
-- Login and sessions work with `Secure` cookies.
-- Unauthorized privileged WebSocket connections are rejected.
+- `npm run build` completes successfully.
+- The website loads over HTTPS.
+- Authentication and session cookies work.
+- Privileged WebSocket requests without the key are rejected.
 - Cross-origin state-changing requests are rejected.
-- Database and Redis data persist after restart.
+- MySQL and Redis data persist across restarts.
 
 ## Known limitations
 
-- Older Node.js, Express, Sequelize and other dependencies need a staged upgrade and vulnerability review.
-- Some OAuth configuration still uses `dummy` placeholders; this is **not** a substitute for provider setup.
-- No clean-server, one-command installation was independently demonstrated from this ZIP.
-- The source snapshot is not a database backup and does not include production data, credentials or deployment secrets.
-- The code may retain upstream branding, assets and configuration defaults. Review them before public deployment.
+- The dependency tree includes old Node.js, Express, and Sequelize versions; review and upgrade in a staging environment.
+- Some OAuth providers may still use `dummy` placeholders when unconfigured; check provider configuration.
+- A clean-server, one-command install has **not** been independently verified from this archive.
+- This source archive does not include production database contents or credentials.
 
-## Project lineage and license
+## Attribution and license
 
-Pixarea is based on [TheRdMelon/pixelplanet](https://github.com/TheRdMelon/pixelplanet). The original upstream project is licensed under **GNU GPL v3**. This derivative retains the supplied `LICENSE` file and must preserve applicable copyright and attribution notices. Third-party media and trademarks may have separate terms.
+Based on [TheRdMelon/pixelplanet](https://github.com/TheRdMelon/pixelplanet). The upstream project's existing copyright notices and **GNU GPL v3** license must be preserved. Third-party artwork, branding, and other assets may have separate rights.
 
-## Contributing and security
+## Security
 
-Please do not post passwords, API keys, private user data or exploit details in public issues. Report security issues privately to the repository maintainer using an appropriate private channel.
+Never publish `.env` files, credentials, SQL dumps, private tokens, or user data. Please report sensitive security issues privately to the repository maintainer.
