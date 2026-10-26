@@ -3,19 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=10.16.0",
-    "npm": ">=6.13.4"
+    "node": ">=20.9.0",
+    "npm": ">=10.2.3"
   },
   "description": "Unlimited planet canvas for placing pixels",
-  "main": "server.js",
+  "main": "build/web.js",
   "scripts": {
-    "build": "babel-node tools/run build",
+    "build": "node tools/run-build.js",
     "clean": "babel-node tools/run clean",
     "babel-node": "cd $INIT_CWD && babel-node",
     "lint": "cd $INIT_CWD && eslint --ext .jsx --ext .js",
     "lint:src": "eslint --ext .jsx --ext .js src",
     "lint:css": "stylelint \"src/**/*.{css,less,scss,sss}\"",
     "lint:staged": "lint-staged",
+    "setup": "npm ci --no-audit --no-fund && npm run build && npm test",
+    "test": "node tools/verify-build.js",
     "upgrade": "npm-check --update"
   },
   "author": "HF <hf@example.com>",
@@ -25,7 +27,7 @@
     "not IE_Mob 11"
   ],
   "dependencies": {
-    "bcrypt": "^3.0.6",
+    "bcryptjs": "^3.0.3",
     "bluebird": "^3.5.0",
     "body-parser": "^1.17.2",
     "bufferutil": "^4.0.1",
@@ -75,7 +77,7 @@
     "redux-persist": "^6.0.0",
     "redux-thunk": "^2.2.0",
     "sequelize": "^5.19.2",
-    "sharp": "^0.23.4",
+    "sharp": "^0.35.5",
     "startaudiocontext": "^1.2.1",
     "sweetalert2": "^9.5.4",
     "three": "^0.112.1",

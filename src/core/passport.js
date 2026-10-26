@@ -16,7 +16,7 @@ import { sanitizeName } from '../utils/validation';
 
 import { User, RegUser } from '../data/models';
 import { auth } from './config';
-import { compareToHash } from '../utils/hash';
+import { compareToHash, generateHash, needsRehash } from '../utils/hash';
 
 
 passport.serializeUser((user, done) => {
@@ -58,18 +58,22 @@ passport.use(new JsonStrategy({
     const query = (nameoremail.indexOf('@') !== -1)
       ? { email: nameoremail }
       : { name: nameoremail };
-    RegUser.findOne({ where: query }).then((reguser) => {
+    RegUser.findOne({ where: query }).then(async (reguser) => {
       if (!reguser) {
         return done(null, false, { message: 'Name or Email does not exist!' });
       }
       if (!compareToHash(password, reguser.password)) {
         return done(null, false, { message: 'Incorrect password!' });
       }
+      if (needsRehash(reguser.password)) {
+        reguser.setDataValue('password', generateHash(password));
+        await reguser.save({ fields: ['password'] });
+      }
       const user = new User(reguser.id);
       user.regUser = reguser;
       user.updateLogInTimestamp();
       return done(null, user);
-    });
+    }).catch(done);
   } catch (err) {
     done(err);
   }
